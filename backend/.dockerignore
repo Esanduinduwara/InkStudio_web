@@ -1,0 +1,80 @@
+# Ignore Git files
+.git
+.gitignore
+.gitattributes
+
+# Ignore documentation
+README.md
+*.md
+
+# Ignore IDE and editor files
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Ignore environment files
+.env
+.env.*
+!.env.example
+
+# Ignore build artifacts and binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Ignore Docker files (we don't need them inside the container)
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Ignore test and script files
+test-api.sh
+start.sh
+*.sh
+
+# Ignore logs
+*.log
+logs/
+
+# Ignore temporary files
+tmp/
+temp/
+*.tmp
+
+# Ignore Go workspace file
+go.work
+go.work.sum
+
+# Ignore vendor directory (if using)
+vendor/
+
+# Ignore database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Ignore coverage reports
+coverage.out
+coverage.html
+*.cover
+
+# Ignore CI/CD files (if any)
+.github/
+.gitlab-ci.yml
+.travis.yml
+Jenkinsfile
+
+# Ignore Postman collections (not needed in container)
+*.postman_collection.json
+*.postman_environment.json
+
+# Ignore any local development scripts
+scripts/
