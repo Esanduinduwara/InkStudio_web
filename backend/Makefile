@@ -1,64 +1,37 @@
-.PHONY: help install build run dev clean test
+.PHONY: help build run test clean docker-build docker-up docker-down docker-logs
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
 	@echo 'Available targets:'
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}'
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  %-15s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-install: ## Install dependencies
-	@echo "📦 Installing dependencies..."
-	go mod download
-	go mod tidy
-
-build: ## Build the server binary
-	@echo "🔨 Building server..."
+build: ## Build the Go application
 	go build -o bin/server ./cmd/server
-	@echo "✅ Build complete: bin/server"
 
-run: build ## Build and run the server
-	@echo "🚀 Starting server..."
-	./bin/server
-
-dev: ## Run in development mode with hot reload (requires air)
-	@echo "🔥 Starting in development mode..."
-	@if command -v air > /dev/null; then \
-		air; \
-	else \
-		echo "⚠️  'air' not installed. Installing..."; \
-		go install github.com/cosmtrek/air@latest; \
-		air; \
-	fi
+run: ## Run the application locally
+	go run ./cmd/server
 
 test: ## Run tests
-	@echo "🧪 Running tests..."
 	go test -v ./...
 
 clean: ## Clean build artifacts
-	@echo "🧹 Cleaning..."
 	rm -rf bin/
-	@echo "✅ Clean complete"
 
-format: ## Format code
-	@echo "✨ Formatting code..."
-	go fmt ./...
+docker-build: ## Build Docker images
+	docker-compose build
 
-lint: ## Run linter
-	@echo "🔍 Running linter..."
-	@if command -v golangci-lint > /dev/null; then \
-		golangci-lint run; \
-	else \
-		echo "⚠️  golangci-lint not installed. Install from https://golangci-lint.run/usage/install/"; \
-	fi
+docker-up: ## Start Docker containers
+	docker-compose up -d
 
-migrate-up: ## Run database migrations
-	@echo "📊 Running migrations..."
-	@echo "Migrations are auto-applied on server start"
+docker-down: ## Stop Docker containers
+	docker-compose down
 
-docker-build: ## Build Docker image
-	@echo "🐳 Building Docker image..."
-	docker build -t inkstudio-backend .
+docker-logs: ## View Docker logs
+	docker-compose logs -f
 
-docker-run: ## Run Docker container
-	@echo "🐳 Running Docker container..."
-	docker run -p 8080:8080 --env-file .env inkstudio-backend
+docker-restart: ## Restart Docker containers
+	docker-compose down && docker-compose up -d
+
+docker-clean: ## Stop containers and remove volumes
+	docker-compose down -v

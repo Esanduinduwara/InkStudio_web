@@ -9,37 +9,38 @@ import (
 	"inkstudio-backend/pkg/response"
 )
 
-// Auth validates JWT tokens and protects routes
-func Auth(next http.HandlerFunc, jwtSecret string) http.HandlerFunc {
+// AuthMiddleware validates JWT tokens and protects routes
+func AuthMiddleware(next http.HandlerFunc, jwtSecret string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// Get Authorization header
+		// Get token from Authorization header
 		authHeader := r.Header.Get("Authorization")
 		if authHeader == "" {
-			response.Error(w, "Authorization header required", http.StatusUnauthorized)
+			response.Error(w, "Missing authorization header", http.StatusUnauthorized)
 			return
 		}
 
-		// Check Bearer token format
+		// Extract token from "Bearer <token>"
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
-			response.Error(w, "Invalid authorization format. Use: Bearer <token>", http.StatusUnauthorized)
+			response.Error(w, "Invalid authorization header format", http.StatusUnauthorized)
 			return
 		}
 
 		tokenString := parts[1]
 
 		// Validate token
-		claims, err := auth.ValidateToken(tokenString, []byte(jwtSecret))
+		claims, err := auth.ValidateToken(tokenString, jwtSecret)
 		if err != nil {
 			response.Error(w, "Invalid or expired token", http.StatusUnauthorized)
 			return
 		}
 
-		// Add user info to request context
+		// Add user information to context
 		ctx := context.WithValue(r.Context(), "user_id", claims.UserID)
 		ctx = context.WithValue(ctx, "email", claims.Email)
 		ctx = context.WithValue(ctx, "username", claims.Username)
 
+		// Call next handler with updated context
 		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }

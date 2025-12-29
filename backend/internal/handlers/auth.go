@@ -52,7 +52,6 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Create user in database
 	user, err := database.CreateUser(h.DB, req.Email, req.Username, hashedPassword)
 	if err != nil {
-		// Check for MySQL duplicate entry error
 		if strings.Contains(err.Error(), "Duplicate entry") || strings.Contains(err.Error(), "duplicate key") {
 			response.Error(w, "Email or username already exists", http.StatusConflict)
 			return
@@ -99,17 +98,14 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	// Fetch user from database
 	user, err := database.GetUserByEmail(h.DB, req.Email)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			response.Error(w, "Invalid email or password", http.StatusUnauthorized)
-			return
-		}
-		log.Printf("Database error: %v", err)
-		response.Error(w, "Failed to login", http.StatusInternalServerError)
+		log.Printf("Failed to get user: %v", err)
+		response.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
 
 	// Verify password
 	if err := auth.VerifyPassword(user.PasswordHash, req.Password); err != nil {
+		log.Printf("Invalid password for user %s", req.Email)
 		response.Error(w, "Invalid email or password", http.StatusUnauthorized)
 		return
 	}
@@ -122,6 +118,9 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Clear password hash before sending response
+	user.PasswordHash = ""
+
 	response.JSON(w, models.AuthResponse{
 		Token:   token,
 		User:    *user,
@@ -129,27 +128,30 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	}, http.StatusOK)
 }
 
-// Profile returns the authenticated user's profile
-func (h *Handler) Profile(w http.ResponseWriter, r *http.Request) {
+// GetMe returns the current user's information (protected route)
+func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		response.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// Get user ID from context (set by AuthMiddleware)
-	userID := r.Context().Value("user_id").(int)
+	// Get user ID from context (set by auth middleware)
+	userID, ok := r.Context().Value("user_id").(int)
+	if !ok {
+		response.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
 
 	// Fetch user from database
 	user, err := database.GetUserByID(h.DB, userID)
 	if err != nil {
-		if strings.Contains(err.Error(), "not found") {
-			response.Error(w, "User not found", http.StatusNotFound)
-			return
-		}
-		log.Printf("Database error: %v", err)
-		response.Error(w, "Failed to fetch profile", http.StatusInternalServerError)
+		log.Printf("Failed to get user: %v", err)
+		response.Error(w, "User not found", http.StatusNotFound)
 		return
 	}
+
+	// Clear password hash before sending response
+	user.PasswordHash = ""
 
 	response.JSON(w, user, http.StatusOK)
 }

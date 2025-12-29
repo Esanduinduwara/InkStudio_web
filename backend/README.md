@@ -1,196 +1,211 @@
-# InkStudio Backend - Authentication API
+# InkStudio Backend - Go + MySQL
 
-A secure Go backend for user authentication with registration, login, and JWT-based authorization using MySQL database.
+A RESTful API backend built with Go and MySQL, featuring user authentication with JWT tokens and bcrypt password hashing.
 
 ## Features
 
-- ✅ User registration with email and username
-- ✅ Secure password hashing using bcrypt (with automatic salting)
-- ✅ User login with email and password
-- ✅ JWT token generation and validation
-- ✅ Protected routes with authentication middleware
-- ✅ MySQL database integration
-- ✅ CORS support for frontend integration
-- ✅ Request logging middleware
-- ✅ Input validation and error handling
+- ✅ User Registration with email validation
+- ✅ User Login with JWT authentication
+- ✅ Password hashing with bcrypt (includes automatic salt generation)
+- ✅ MySQL database
+- ✅ Docker and Docker Compose setup
+- ✅ CORS middleware
+- ✅ Logging middleware
+- ✅ Protected routes with JWT validation
+- ✅ Health check endpoint
 
-## Security Features
+## Tech Stack
 
-### Password Security with Salt and Hashing
+- **Language**: Go 1.21
+- **Database**: MySQL 8.0
+- **Authentication**: JWT (JSON Web Tokens)
+- **Password Hashing**: bcrypt
+- **Containerization**: Docker & Docker Compose
 
-- **Bcrypt Hashing**: Passwords are hashed using bcrypt with a cost factor of 12
-- **Automatic Salting**: Bcrypt automatically generates a unique random salt for each password
-- **Salt Storage**: Salt is embedded within the hash (no separate storage needed)
-- **No Plain Text Storage**: Passwords are never stored in plain text
-- **Hash Comparison**: Uses constant-time comparison to prevent timing attacks
-- **Adaptive**: Cost factor can be increased as hardware improves
+## Project Structure
 
-**How Salting Works:**
-
-- Each password gets a unique 22-character random salt
-- Salt + password are hashed together
-- Result: `$2a$12$[salt][hash]` (60 characters total)
-- Even identical passwords produce different hashes
-
-See [SECURITY.md](SECURITY.md) for detailed security documentation.
-
-### JWT Authentication
-
-- **Token Expiration**: Tokens expire after 24 hours
-- **HMAC Signing**: Tokens are signed using HMAC-SHA256
-- **Claims Validation**: Validates expiration, issued at, and not before claims
-
-## Prerequisites
-
-- Go 1.21 or higher
-- MySQL 8.0 or higher
-
-## Installation
-
-1. **Clone the repository** (if not already done)
-
-2. **Install dependencies**:
-
-```bash
-cd backend
-go mod download
+```
+backend/
+├── cmd/
+│   └── server/
+│       └── main.go           # Application entry point
+├── config/
+│   └── config.go             # Configuration management
+├── internal/
+│   ├── auth/
+│   │   ├── jwt.go           # JWT token generation and validation
+│   │   └── password.go       # Password hashing with bcrypt
+│   ├── database/
+│   │   ├── db.go            # Database connection
+│   │   └── user.go          # User database operations
+│   ├── handlers/
+│   │   ├── auth.go          # Authentication handlers
+│   │   ├── handler.go       # Base handler
+│   │   └── health.go        # Health check handler
+│   ├── middleware/
+│   │   ├── auth.go          # JWT authentication middleware
+│   │   ├── cors.go          # CORS middleware
+│   │   └── logging.go       # Request logging middleware
+│   └── models/
+│       └── user.go          # User models and DTOs
+├── pkg/
+│   └── response/
+│       └── response.go       # HTTP response helpers
+├── docker-compose.yml        # Docker Compose configuration
+├── Dockerfile               # Docker image definition
+├── init.sql                 # Database initialization script
+├── go.mod                   # Go module dependencies
+├── go.sum                   # Go module checksums
+├── Makefile                 # Build automation
+└── README.md
 ```
 
-3. **Setup MySQL Database**:
+## Getting Started
 
-```bash
-# Option 1: Using the setup script
-chmod +x setup-mysql.sh
-./setup-mysql.sh
+### Prerequisites
 
-# Option 2: Manually create database
-mysql -u root -p
-CREATE DATABASE inkstudio CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
+- Docker and Docker Compose installed
+- (Optional) Go 1.21+ for local development
 
-4. **Configure environment variables**:
+### Running with Docker (Recommended)
 
-```bash
-cp .env.example .env
-# Edit .env with your MySQL configuration
-```
+1. **Start the services**:
+   ```bash
+   cd backend
+   make docker-up
+   ```
+   Or manually:
+   ```bash
+   docker-compose up -d
+   ```
 
-## Running the Server
+2. **Check the logs**:
+   ```bash
+   make docker-logs
+   ```
+   Or:
+   ```bash
+   docker-compose logs -f
+   ```
 
-```bash
-# Development mode
-cd cmd/server
-go run .
+3. **Stop the services**:
+   ```bash
+   make docker-down
+   ```
 
-# Or from backend root
-go run ./cmd/server
+The backend will be available at `http://localhost:8080` and MySQL at `localhost:3306`.
 
-# Build and run
-go build -o bin/server ./cmd/server
-./bin/server
-```
+### Local Development (Without Docker)
 
-The server will start on `http://localhost:8080`
+1. **Start MySQL** (you'll need MySQL running locally):
+   ```bash
+   mysql -u root -p
+   CREATE DATABASE inkstudio;
+   ```
+
+2. **Set environment variables**:
+   ```bash
+   export DB_HOST=localhost
+   export DB_PORT=3306
+   export DB_USER=inkstudio
+   export DB_PASSWORD=inkstudio_password
+   export DB_NAME=inkstudio
+   export JWT_SECRET=your-super-secret-jwt-key
+   ```
+
+3. **Run the application**:
+   ```bash
+   make run
+   ```
 
 ## API Endpoints
 
-### 1. Health Check
+### Health Check
+- **GET** `/health`
+  - Returns service health status
+  - Response: `200 OK`
+    ```json
+    {
+      "status": "healthy",
+      "database": "connected"
+    }
+    ```
 
+### Authentication
+
+#### Register
+- **POST** `/api/auth/register`
+  - Register a new user
+  - Request body:
+    ```json
+    {
+      "email": "user@example.com",
+      "username": "username",
+      "password": "password123"
+    }
+    ```
+  - Response: `201 Created`
+    ```json
+    {
+      "token": "eyJhbGciOiJIUzI1NiIs...",
+      "user": {
+        "id": 1,
+        "email": "user@example.com",
+        "username": "username",
+        "created_at": "2025-12-29T10:00:00Z",
+        "updated_at": "2025-12-29T10:00:00Z"
+      },
+      "message": "User registered successfully"
+    }
+    ```
+
+#### Login
+- **POST** `/api/auth/login`
+  - Login with existing credentials
+  - Request body:
+    ```json
+    {
+      "email": "user@example.com",
+      "password": "password123"
+    }
+    ```
+  - Response: `200 OK`
+    ```json
+    {
+      "token": "eyJhbGciOiJIUzI1NiIs...",
+      "user": {
+        "id": 1,
+        "email": "user@example.com",
+        "username": "username",
+        "created_at": "2025-12-29T10:00:00Z",
+        "updated_at": "2025-12-29T10:00:00Z"
+      },
+      "message": "Login successful"
+    }
+    ```
+
+#### Get Current User (Protected)
+- **GET** `/api/auth/me`
+  - Get current user information
+  - Headers: `Authorization: Bearer <token>`
+  - Response: `200 OK`
+    ```json
+    {
+      "id": 1,
+      "email": "user@example.com",
+      "username": "username",
+      "created_at": "2025-12-29T10:00:00Z",
+      "updated_at": "2025-12-29T10:00:00Z"
+    }
+    ```
+
+## Testing the API
+
+### Using curl
+
+**Register a new user**:
 ```bash
-GET /api/health
-```
-
-**Response**:
-
-```json
-{
-  "status": "healthy",
-  "time": "2025-12-10T12:00:00Z"
-}
-```
-
-### 2. Register New User
-
-```bash
-POST /api/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "username": "johndoe",
-  "password": "securepassword123"
-}
-```
-
-**Response** (201 Created):
-
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "username": "johndoe",
-    "created_at": "2025-12-10T12:00:00Z",
-    "updated_at": "2025-12-10T12:00:00Z"
-  },
-  "message": "User registered successfully"
-}
-```
-
-### 3. Login
-
-```bash
-POST /api/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "securepassword123"
-}
-```
-
-**Response** (200 OK):
-
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-  "user": {
-    "id": 1,
-    "email": "user@example.com",
-    "username": "johndoe",
-    "created_at": "2025-12-10T12:00:00Z",
-    "updated_at": "2025-12-10T12:00:00Z"
-  },
-  "message": "Login successful"
-}
-```
-
-### 4. Get User Profile (Protected)
-
-```bash
-GET /api/profile
-Authorization: Bearer <your_jwt_token>
-```
-
-**Response** (200 OK):
-
-```json
-{
-  "id": 1,
-  "email": "user@example.com",
-  "username": "johndoe",
-  "created_at": "2025-12-10T12:00:00Z",
-  "updated_at": "2025-12-10T12:00:00Z"
-}
-```
-
-## Testing with cURL
-
-### Register a new user:
-
-```bash
-curl -X POST http://localhost:8080/api/register \
+curl -X POST http://localhost:8080/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -199,10 +214,9 @@ curl -X POST http://localhost:8080/api/register \
   }'
 ```
 
-### Login:
-
+**Login**:
 ```bash
-curl -X POST http://localhost:8080/api/login \
+curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "test@example.com",
@@ -210,18 +224,39 @@ curl -X POST http://localhost:8080/api/login \
   }'
 ```
 
-### Access protected route:
-
+**Get current user** (replace TOKEN with the JWT from login):
 ```bash
-# Save token from login response
-TOKEN="your_jwt_token_here"
-
-curl -X GET http://localhost:8080/api/profile \
-  -H "Authorization: Bearer $TOKEN"
+curl -X GET http://localhost:8080/api/auth/me \
+  -H "Authorization: Bearer TOKEN"
 ```
+
+## Security Features
+
+### Password Security
+- **Bcrypt hashing**: All passwords are hashed using bcrypt with a cost factor of 12
+- **Automatic salt generation**: Bcrypt automatically generates a unique salt for each password
+- **Password validation**: Minimum password length of 6 characters
+
+### JWT Authentication
+- **Token expiration**: Tokens expire after 24 hours
+- **Secure signing**: Tokens are signed with HS256 algorithm
+- **Protected routes**: Sensitive endpoints require valid JWT tokens
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `DB_HOST` | MySQL host | `localhost` |
+| `DB_PORT` | MySQL port | `3306` |
+| `DB_USER` | MySQL user | `inkstudio` |
+| `DB_PASSWORD` | MySQL password | `inkstudio_password` |
+| `DB_NAME` | MySQL database name | `inkstudio` |
+| `JWT_SECRET` | JWT signing secret | (change in production!) |
+| `PORT` | Application port | `8080` |
 
 ## Database Schema
 
+### Users Table
 ```sql
 CREATE TABLE users (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -230,137 +265,58 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_users_email (email),
-    INDEX idx_users_username (username)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    INDEX idx_email (email),
+    INDEX idx_username (username)
+);
 ```
 
-**Note:** The `password_hash` column stores bcrypt hashes which include:
-
-- Algorithm identifier ($2a$ or $2b$)
-- Cost factor (12 = 4,096 iterations)
-- 22-character random salt
-- 31-character password hash
-- Total: 60 characters (e.g., `$2a$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW`)
-
-## Project Structure
-
-```
-backend/
-├── cmd/
-│   └── server/
-│       └── main.go              # Application entry point
-├── internal/
-│   ├── auth/
-│   │   ├── jwt.go              # JWT token generation and validation
-│   │   └── password.go         # Password hashing with bcrypt (includes salt)
-│   ├── database/
-│   │   ├── db.go               # Database connection and initialization
-│   │   └── user.go             # User database operations
-│   ├── handlers/
-│   │   ├── handler.go          # Handler struct and constructor
-│   │   ├── auth.go             # Registration and login handlers
-│   │   └── health.go           # Health check handler
-│   ├── middleware/
-│   │   ├── auth.go             # JWT authentication middleware
-│   │   ├── cors.go             # CORS middleware
-│   │   └── logging.go          # Request logging middleware
-│   └── models/
-│       └── user.go             # User models and request/response structs
-├── pkg/
-│   └── response/
-│       └── response.go         # JSON response helpers
-├── config/
-│   └── config.go               # Configuration management
-├── go.mod                      # Go module dependencies
-├── .env.example                # Example environment configuration
-├── .gitignore                  # Git ignore rules
-└── README.md                   # This file
-```
-
-## Environment Variables
-
-| Variable       | Description                | Default                                                                      |
-| -------------- | -------------------------- | ---------------------------------------------------------------------------- |
-| `DATABASE_URL` | MySQL connection string    | `root:password@tcp(localhost:3306)/inkstudio?parseTime=true&charset=utf8mb4` |
-| `JWT_SECRET`   | Secret key for JWT signing | `your-secret-key-change-in-production`                                       |
-| `PORT`         | Server port                | `8080`                                                                       |
-
-**MySQL Connection String Format:**
-
-```
-username:password@tcp(host:port)/database?parseTime=true&charset=utf8mb4
-```
-
-## Error Handling
-
-The API returns consistent error responses:
-
-```json
-{
-  "error": "Error message description"
-}
-```
-
-Common HTTP status codes:
-
-- `200` - Success
-- `201` - Created
-- `400` - Bad Request (validation errors)
-- `401` - Unauthorized (invalid credentials or token)
-- `404` - Not Found
-- `409` - Conflict (duplicate email/username)
-- `500` - Internal Server Error
-
-## Production Deployment
-
-1. **Set strong JWT secret**:
-
-   - Minimum 32 characters
-   - Use random string generator
-
-2. **Configure CORS**:
-
-   - Change `Access-Control-Allow-Origin` from `*` to your frontend domain
-
-3. **Use environment variables**:
-
-   - Never commit `.env` file
-   - Use secrets manager in production
-
-4. **Enable SSL/TLS**:
-
-   - Use HTTPS in production
-   - Enable MySQL SSL connections
-
-5. **Database security**:
-
-   - Use strong database password
-   - Create dedicated database user (not root)
-   - Enable connection pooling
-   - Regular backups
-   - Consider encryption at rest
-
-6. **Additional Security**:
-   - Review [SECURITY.md](SECURITY.md) for detailed security practices
-   - Implement rate limiting
-   - Add account lockout after failed login attempts
-   - Consider adding 2FA (Two-Factor Authentication)
-   - Regular security audits
-
-## Quick Start with Docker
+## Makefile Commands
 
 ```bash
-# Start MySQL and backend
-docker-compose up -d
-
-# Check logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
+make help           # Show available commands
+make build          # Build the Go application
+make run            # Run the application locally
+make test           # Run tests
+make clean          # Clean build artifacts
+make docker-build   # Build Docker images
+make docker-up      # Start Docker containers
+make docker-down    # Stop Docker containers
+make docker-logs    # View Docker logs
+make docker-restart # Restart Docker containers
+make docker-clean   # Stop containers and remove volumes
 ```
+
+## Troubleshooting
+
+### Can't connect to MySQL
+- Wait a few seconds after `docker-compose up` for MySQL to initialize
+- Check logs: `docker-compose logs mysql`
+- Verify MySQL is healthy: `docker-compose ps`
+
+### Port already in use
+- Change ports in `docker-compose.yml`
+- Or stop conflicting services
+
+### Database connection errors
+- Ensure MySQL container is running: `docker ps`
+- Check environment variables are set correctly
+- Verify database credentials
+
+## Production Considerations
+
+⚠️ **Before deploying to production**:
+
+1. Change `JWT_SECRET` to a strong, random value
+2. Use environment-specific configuration
+3. Enable HTTPS/TLS
+4. Implement rate limiting
+5. Add input validation and sanitization
+6. Set up proper logging and monitoring
+7. Use secrets management (e.g., Docker secrets, HashiCorp Vault)
+8. Restrict CORS origins to your frontend domain
+9. Regular security updates and dependency scanning
+10. Implement database backups
 
 ## License
 
-MIT License
+MIT

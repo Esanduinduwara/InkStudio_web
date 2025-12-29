@@ -7,24 +7,30 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: rootpassword
       MYSQL_DATABASE: inkstudio
-      MYSQL_USER: inkstudio_user
-      MYSQL_PASSWORD: inkstudio_pass
+      MYSQL_USER: inkstudio
+      MYSQL_PASSWORD: inkstudio_password
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
-    command: --default-authentication-plugin=mysql_native_password
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootpassword"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - inkstudio-network
 
   backend:
     build: .
     container_name: inkstudio-backend
     environment:
-      DATABASE_URL: inkstudio_user:inkstudio_pass@tcp(mysql:3306)/inkstudio?parseTime=true&charset=utf8mb4
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: inkstudio
+      DB_PASSWORD: inkstudio_password
+      DB_NAME: inkstudio
       JWT_SECRET: your-super-secret-jwt-key-change-in-production
       PORT: 8080
     ports:
@@ -33,6 +39,12 @@ services:
       mysql:
         condition: service_healthy
     restart: unless-stopped
+    networks:
+      - inkstudio-network
 
 volumes:
   mysql_data:
+
+networks:
+  inkstudio-network:
+    driver: bridge
