@@ -17,12 +17,14 @@ A secure Go backend for user authentication with registration, login, and JWT-ba
 ## Security Features
 
 ### Password Security
+
 - **Bcrypt Hashing**: Passwords are hashed using bcrypt with a cost factor of 12
 - **Automatic Salting**: Bcrypt automatically generates a unique salt for each password
 - **No Plain Text Storage**: Passwords are never stored in plain text
 - **Hash Comparison**: Uses constant-time comparison to prevent timing attacks
 
 ### JWT Authentication
+
 - **Token Expiration**: Tokens expire after 24 hours
 - **HMAC Signing**: Tokens are signed using HMAC-SHA256
 - **Claims Validation**: Validates expiration, issued at, and not before claims
@@ -37,12 +39,14 @@ A secure Go backend for user authentication with registration, login, and JWT-ba
 1. **Clone the repository** (if not already done)
 
 2. **Install dependencies**:
+
 ```bash
 cd backend
 go mod download
 ```
 
 3. **Setup PostgreSQL Database**:
+
 ```bash
 # Create database
 createdb inkstudio
@@ -53,6 +57,7 @@ CREATE DATABASE inkstudio;
 ```
 
 4. **Configure environment variables**:
+
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
@@ -78,11 +83,13 @@ The server will start on `http://localhost:8080`
 ## API Endpoints
 
 ### 1. Health Check
+
 ```bash
 GET /api/health
 ```
 
 **Response**:
+
 ```json
 {
   "status": "healthy",
@@ -91,6 +98,7 @@ GET /api/health
 ```
 
 ### 2. Register New User
+
 ```bash
 POST /api/register
 Content-Type: application/json
@@ -103,6 +111,7 @@ Content-Type: application/json
 ```
 
 **Response** (201 Created):
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -118,6 +127,7 @@ Content-Type: application/json
 ```
 
 ### 3. Login
+
 ```bash
 POST /api/login
 Content-Type: application/json
@@ -129,6 +139,7 @@ Content-Type: application/json
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
@@ -144,12 +155,14 @@ Content-Type: application/json
 ```
 
 ### 4. Get User Profile (Protected)
+
 ```bash
 GET /api/profile
 Authorization: Bearer <your_jwt_token>
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "id": 1,
@@ -163,6 +176,7 @@ Authorization: Bearer <your_jwt_token>
 ## Testing with cURL
 
 ### Register a new user:
+
 ```bash
 curl -X POST http://localhost:8080/api/register \
   -H "Content-Type: application/json" \
@@ -174,6 +188,7 @@ curl -X POST http://localhost:8080/api/register \
 ```
 
 ### Login:
+
 ```bash
 curl -X POST http://localhost:8080/api/login \
   -H "Content-Type: application/json" \
@@ -184,6 +199,7 @@ curl -X POST http://localhost:8080/api/login \
 ```
 
 ### Access protected route:
+
 ```bash
 # Save token from login response
 TOKEN="your_jwt_token_here"
@@ -245,11 +261,11 @@ backend/
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
+| Variable       | Description                  | Default                                                                 |
+| -------------- | ---------------------------- | ----------------------------------------------------------------------- |
 | `DATABASE_URL` | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/inkstudio?sslmode=disable` |
-| `JWT_SECRET` | Secret key for JWT signing | `your-secret-key-change-in-production` |
-| `PORT` | Server port | `8080` |
+| `JWT_SECRET`   | Secret key for JWT signing   | `your-secret-key-change-in-production`                                  |
+| `PORT`         | Server port                  | `8080`                                                                  |
 
 ## Error Handling
 
@@ -262,6 +278,7 @@ The API returns consistent error responses:
 ```
 
 Common HTTP status codes:
+
 - `200` - Success
 - `201` - Created
 - `400` - Bad Request (validation errors)
@@ -273,17 +290,21 @@ Common HTTP status codes:
 ## Production Deployment
 
 1. **Set strong JWT secret**:
+
    - Minimum 32 characters
    - Use random string generator
 
 2. **Configure CORS**:
+
    - Change `Access-Control-Allow-Origin` from `*` to your frontend domain
 
 3. **Use environment variables**:
+
    - Never commit `.env` file
    - Use secrets manager in production
 
 4. **Enable SSL/TLS**:
+
    - Use HTTPS in production
    - Set `sslmode=require` in DATABASE_URL
 
