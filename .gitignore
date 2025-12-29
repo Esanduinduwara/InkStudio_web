@@ -79,3 +79,4 @@ ehthumbs.db
 Desktop.ini
 
 # End of .gitignore
+/test
