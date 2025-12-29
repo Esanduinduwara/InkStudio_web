@@ -15,7 +15,7 @@ type Config struct {
 // Load reads configuration from environment variables
 func Load() *Config {
 	cfg := &Config{
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/inkstudio?sslmode=disable"),
+		DatabaseURL: getEnv("DATABASE_URL", "root:password@tcp(localhost:3306)/inkstudio?parseTime=true&charset=utf8mb4"),
 		JWTSecret:   getEnv("JWT_SECRET", "your-secret-key-change-in-production"),
 		Port:        getEnv("PORT", "8080"),
 	}

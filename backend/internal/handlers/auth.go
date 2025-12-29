@@ -53,7 +53,8 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	// Create user in database
 	user, err := database.CreateUser(h.DB, req.Email, req.Username, hashedPassword)
 	if err != nil {
-		if strings.Contains(err.Error(), "duplicate key") {
+		// Check for MySQL duplicate entry error
+		if strings.Contains(err.Error(), "Duplicate entry") || strings.Contains(err.Error(), "duplicate key") {
 			response.Error(w, "Email or username already exists", http.StatusConflict)
 			return
 		}

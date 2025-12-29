@@ -8,17 +8,34 @@ import (
 
 // CreateUser inserts a new user into the database
 func CreateUser(db *sql.DB, email, username, passwordHash string) (*models.User, error) {
-	var user models.User
-	err := db.QueryRow(`
+	// Insert user into database
+	result, err := db.Exec(`
 		INSERT INTO users (email, username, password_hash)
-		VALUES ($1, $2, $3)
-		RETURNING id, email, username, created_at, updated_at
-	`, email, username, passwordHash).Scan(
+		VALUES (?, ?, ?)
+	`, email, username, passwordHash)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to create user: %w", err)
+	}
+
+	// Get the last inserted ID
+	userID, err := result.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user ID: %w", err)
+	}
+
+	// Fetch the created user
+	var user models.User
+	err = db.QueryRow(`
+		SELECT id, email, username, created_at, updated_at
+		FROM users
+		WHERE id = ?
+	`, userID).Scan(
 		&user.ID, &user.Email, &user.Username, &user.CreatedAt, &user.UpdatedAt,
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create user: %w", err)
+		return nil, fmt.Errorf("failed to fetch created user: %w", err)
 	}
 
 	return &user, nil
@@ -30,7 +47,7 @@ func GetUserByEmail(db *sql.DB, email string) (*models.User, error) {
 	err := db.QueryRow(`
 		SELECT id, email, username, password_hash, created_at, updated_at
 		FROM users
-		WHERE email = $1
+		WHERE email = ?
 	`, email).Scan(
 		&user.ID, &user.Email, &user.Username, &user.PasswordHash,
 		&user.CreatedAt, &user.UpdatedAt,
@@ -51,7 +68,7 @@ func GetUserByID(db *sql.DB, id int) (*models.User, error) {
 	err := db.QueryRow(`
 		SELECT id, email, username, created_at, updated_at
 		FROM users
-		WHERE id = $1
+		WHERE id = ?
 	`, id).Scan(
 		&user.ID, &user.Email, &user.Username, &user.CreatedAt, &user.UpdatedAt,
 	)

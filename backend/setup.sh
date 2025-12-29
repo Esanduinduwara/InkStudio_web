@@ -20,12 +20,13 @@ echo "✅ Go version: $(go version)"
 echo ""
 
 # Check if PostgreSQL is installed
-if ! command -v psql &> /dev/null; then
-    echo "⚠️  PostgreSQL client not found. Make sure PostgreSQL is installed and running."
-    echo "   Linux: sudo apt-get install postgresql"
-    echo "   Mac: brew install postgresql"
+if ! command -v mysql &> /dev/null; then
+    echo "⚠️  MySQL client not found. Make sure MySQL is installed and running."
+    echo "   Linux: sudo apt-get install mysql-server mysql-client"
+    echo "   Mac: brew install mysql"
+    echo "   Or use Docker: docker run -d -p 3306:3306 -e MYSQL_ROOT_PASSWORD=password mysql:8.0"
 else
-    echo "✅ PostgreSQL client found"
+    echo "✅ MySQL client found"
 fi
 echo ""
 
@@ -53,13 +54,14 @@ echo ""
 
 # Check if database exists
 echo "🗄️  Checking database connection..."
-if command -v psql &> /dev/null; then
+if command -v mysql &> /dev/null; then
     # Try to connect to the database
-    if psql -lqt postgres://postgres:postgres@localhost:5432/postgres 2>/dev/null | cut -d \| -f 1 | grep -qw inkstudio; then
+    if mysql -e "USE inkstudio;" 2>/dev/null; then
         echo "✅ Database 'inkstudio' exists"
     else
-        echo "⚠️  Database 'inkstudio' not found. Creating it..."
-        psql postgres://postgres:postgres@localhost:5432/postgres -c "CREATE DATABASE inkstudio;" 2>/dev/null || echo "❌ Failed to create database. Please create it manually."
+        echo "⚠️  Database 'inkstudio' not found."
+        echo "   Run './setup-mysql.sh' to create it, or create it manually:"
+        echo "   mysql -u root -p -e 'CREATE DATABASE inkstudio;'"
     fi
 fi
 echo ""

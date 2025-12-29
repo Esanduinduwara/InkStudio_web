@@ -1,6 +1,6 @@
 # InkStudio Backend - Authentication API
 
-A secure Go backend for user authentication with registration, login, and JWT-based authorization.
+A secure Go backend for user authentication with registration, login, and JWT-based authorization using MySQL database.
 
 ## Features
 
@@ -9,19 +9,30 @@ A secure Go backend for user authentication with registration, login, and JWT-ba
 - ✅ User login with email and password
 - ✅ JWT token generation and validation
 - ✅ Protected routes with authentication middleware
-- ✅ PostgreSQL database integration
+- ✅ MySQL database integration
 - ✅ CORS support for frontend integration
 - ✅ Request logging middleware
 - ✅ Input validation and error handling
 
 ## Security Features
 
-### Password Security
+### Password Security with Salt and Hashing
 
 - **Bcrypt Hashing**: Passwords are hashed using bcrypt with a cost factor of 12
-- **Automatic Salting**: Bcrypt automatically generates a unique salt for each password
+- **Automatic Salting**: Bcrypt automatically generates a unique random salt for each password
+- **Salt Storage**: Salt is embedded within the hash (no separate storage needed)
 - **No Plain Text Storage**: Passwords are never stored in plain text
 - **Hash Comparison**: Uses constant-time comparison to prevent timing attacks
+- **Adaptive**: Cost factor can be increased as hardware improves
+
+**How Salting Works:**
+
+- Each password gets a unique 22-character random salt
+- Salt + password are hashed together
+- Result: `$2a$12$[salt][hash]` (60 characters total)
+- Even identical passwords produce different hashes
+
+See [SECURITY.md](SECURITY.md) for detailed security documentation.
 
 ### JWT Authentication
 
@@ -32,7 +43,7 @@ A secure Go backend for user authentication with registration, login, and JWT-ba
 ## Prerequisites
 
 - Go 1.21 or higher
-- PostgreSQL 12 or higher
+- MySQL 8.0 or higher
 
 ## Installation
 
@@ -45,22 +56,23 @@ cd backend
 go mod download
 ```
 
-3. **Setup PostgreSQL Database**:
+3. **Setup MySQL Database**:
 
 ```bash
-# Create database
-createdb inkstudio
+# Option 1: Using the setup script
+chmod +x setup-mysql.sh
+./setup-mysql.sh
 
-# Or using psql
-psql -U postgres
-CREATE DATABASE inkstudio;
+# Option 2: Manually create database
+mysql -u root -p
+CREATE DATABASE inkstudio CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 4. **Configure environment variables**:
 
 ```bash
 cp .env.example .env
-# Edit .env with your configuration
+# Edit .env with your MySQL configuration
 ```
 
 ## Running the Server
@@ -212,17 +224,24 @@ curl -X GET http://localhost:8080/api/profile \
 
 ```sql
 CREATE TABLE users (
-    id SERIAL PRIMARY KEY,
+    id INT AUTO_INCREMENT PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     username VARCHAR(100) UNIQUE NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_username ON users(username);
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_users_email (email),
+    INDEX idx_users_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
+
+**Note:** The `password_hash` column stores bcrypt hashes which include:
+
+- Algorithm identifier ($2a$ or $2b$)
+- Cost factor (12 = 4,096 iterations)
+- 22-character random salt
+- 31-character password hash
+- Total: 60 characters (e.g., `$2a$12$R9h/cIPz0gi.URNNX3kh2OPST9/PgBkqquzi.Ss7KIUgO2t0jWMUW`)
 
 ## Project Structure
 
@@ -261,11 +280,17 @@ backend/
 
 ## Environment Variables
 
-| Variable       | Description                  | Default                                                                 |
-| -------------- | ---------------------------- | ----------------------------------------------------------------------- |
-| `DATABASE_URL` | PostgreSQL connection string | `postgres://postgres:postgres@localhost:5432/inkstudio?sslmode=disable` |
-| `JWT_SECRET`   | Secret key for JWT signing   | `your-secret-key-change-in-production`                                  |
-| `PORT`         | Server port                  | `8080`                                                                  |
+| Variable       | Description                | Default                                                                      |
+| -------------- | -------------------------- | ---------------------------------------------------------------------------- |
+| `DATABASE_URL` | MySQL connection string    | `root:password@tcp(localhost:3306)/inkstudio?parseTime=true&charset=utf8mb4` |
+| `JWT_SECRET`   | Secret key for JWT signing | `your-secret-key-change-in-production`                                       |
+| `PORT`         | Server port                | `8080`                                                                       |
+
+**MySQL Connection String Format:**
+
+```
+username:password@tcp(host:port)/database?parseTime=true&charset=utf8mb4
+```
 
 ## Error Handling
 
@@ -306,12 +331,35 @@ Common HTTP status codes:
 4. **Enable SSL/TLS**:
 
    - Use HTTPS in production
-   - Set `sslmode=require` in DATABASE_URL
+   - Enable MySQL SSL connections
 
 5. **Database security**:
+
    - Use strong database password
+   - Create dedicated database user (not root)
    - Enable connection pooling
    - Regular backups
+   - Consider encryption at rest
+
+6. **Additional Security**:
+   - Review [SECURITY.md](SECURITY.md) for detailed security practices
+   - Implement rate limiting
+   - Add account lockout after failed login attempts
+   - Consider adding 2FA (Two-Factor Authentication)
+   - Regular security audits
+
+## Quick Start with Docker
+
+```bash
+# Start MySQL and backend
+docker-compose up -d
+
+# Check logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
 
 ## License
 
